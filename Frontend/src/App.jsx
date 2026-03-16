@@ -1,21 +1,7 @@
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import './App.css'
+import Login from '@/components/login'
 
 function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-        <Button
-          variant="outline"
-          size="lg"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </Button>
-    </>
-  )
+  return <Login />
 }
 
 export default App
