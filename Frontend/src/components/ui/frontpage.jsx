@@ -66,7 +66,7 @@ function Frontpage() {
                 type="submit"
                 className="rounded-full bg-fuchsia-300 px-5 py-2.5 text-sm font-semibold text-[#2b1242] transition hover:bg-fuchsia-200"
               >
-                Slaa op
+                Slå op
               </button>
             </div>
           </form>
