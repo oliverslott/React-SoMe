@@ -10,7 +10,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-function Login() {
+function Register() {
   function handleSubmit(event) {
     event.preventDefault()
   }
@@ -24,14 +24,24 @@ function Login() {
               React SoMe
             </span>
             <div className="space-y-1">
-              <CardTitle className="text-2xl">Log in</CardTitle>
+              <CardTitle className="text-2xl">Create account</CardTitle>
               <CardDescription>
-                Enter your email and password to continue.
+                Set up your profile to start posting and connecting.
               </CardDescription>
             </div>
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={handleSubmit}>
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Jane Doe"
+                  autoComplete="name"
+                  required
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -47,22 +57,32 @@ function Login() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Enter your password"
-                  autoComplete="current-password"
+                  placeholder="Create a password"
+                  autoComplete="new-password"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirm password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  placeholder="Re-enter your password"
+                  autoComplete="new-password"
                   required
                 />
               </div>
               <Button className="w-full" size="lg" type="submit">
-                Continue
+                Create account
               </Button>
             </form>
             <p className="mt-4 text-center text-sm text-muted-foreground">
-              Need an account?{' '}
+              Already have an account?{' '}
               <Link
                 className="font-medium text-foreground underline underline-offset-4 transition hover:text-primary"
-                to="/register"
+                to="/login"
               >
-                Register
+                Log in
               </Link>
             </p>
           </CardContent>
@@ -72,4 +92,4 @@ function Login() {
   )
 }
 
-export default Login
+export default Register
