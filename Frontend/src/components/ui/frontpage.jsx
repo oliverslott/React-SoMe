@@ -4,6 +4,8 @@ function Frontpage() {
   const [postText, setPostText] = useState('') // input tekst
   const [posts, setPosts] = useState([]) // liste af opslag
 
+  const onlineUsers = ['Oliver', 'Malthe', 'Hussein', 'Muddi'] // eksempel på online brugere
+
   const handleSubmit = (event) => {
     event.preventDefault() // stop reload
 
@@ -67,7 +69,12 @@ function Frontpage() {
             backdrop-blur
             md:block
           "
-        />
+        >
+            <h2 className="mb-4 text-lg font-semibold text-white">
+                #Trending
+            </h2>
+
+        </aside>
 
         {/* hovedindhold */}
         <section
@@ -262,7 +269,23 @@ function Frontpage() {
             backdrop-blur
             xl:block
           "
-        />
+        >
+          <h2 className="mb-4 text-lg font-semibold text-white">
+            Online:
+          </h2>
+
+          <div className="space-y-3">
+            {onlineUsers.map((user) => (
+              <div
+                key={user}
+                className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3"
+              >
+                <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
+                <span className="text-sm text-white/85">{user}</span>
+              </div>
+            ))}
+          </div>
+        </aside>
       </div>
     </main>
   )
