@@ -100,7 +100,7 @@ function Frontpage() {
                 text-white/45
               "
             >
-              dit sociale feed
+              Jeg ved ikke hvad der skal stå her
             </p>
 
             <h1
@@ -168,7 +168,7 @@ function Frontpage() {
             {/* form footer */}
             <div className="mt-4 flex items-center justify-between gap-4">
               <p className="text-sm text-white/45">
-                Dit opslag bliver kun gemt midlertidigt i siden.
+                Tilføj # for at komme på trending.
               </p>
 
               {/* submit knap */}
