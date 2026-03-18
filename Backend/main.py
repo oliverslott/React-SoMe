@@ -175,3 +175,27 @@ def login_account(payload: LoginRequest):
             "email": user["email"],
         },
     }
+
+
+@app.get("/post-author")
+def get_post_author():
+    hardcoded_user_id = 1
+
+    with get_connection() as connection:
+        user = connection.execute(
+            "SELECT id, name FROM users WHERE id = ?",
+            (hardcoded_user_id,),
+        ).fetchone()
+
+    if user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="The hardcoded post author with user_id 1 was not found.",
+        )
+
+    return {
+        "user": {
+            "id": user["id"],
+            "name": user["name"],
+        }
+    }

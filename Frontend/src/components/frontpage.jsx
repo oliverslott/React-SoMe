@@ -1,11 +1,35 @@
-import { useState } from 'react' // hook til state
+import { useEffect, useState } from 'react' // hook til state
+import { getJson } from '@/lib/api'
 import Post from './post'
 
 function Frontpage() {
   const [postText, setPostText] = useState('') // input tekst
   const [posts, setPosts] = useState([]) // liste af opslag
+  const [postAuthorName, setPostAuthorName] = useState('dig')
 
   const onlineUsers = ['Oliver', 'Malthe', 'Hussein', 'Muddi'] // eksempel på online brugere
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadPostAuthor() {
+      try {
+        const response = await getJson('/post-author')
+
+        if (isMounted) {
+          setPostAuthorName(response.user.name)
+        }
+      } catch (error) {
+        console.error('Kunne ikke hente post-forfatter:', error)
+      }
+    }
+
+    loadPostAuthor()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const handleSubmit = (event) => {
     event.preventDefault() // stop reload
@@ -71,10 +95,9 @@ function Frontpage() {
             md:block
           "
         >
-            <h2 className="mb-4 text-lg font-semibold text-white">
-                #Trending
-            </h2>
-
+          <h2 className="mb-4 text-lg font-semibold text-white">
+            #Trending
+          </h2>
         </aside>
 
         {/* hovedindhold */}
@@ -214,7 +237,7 @@ function Frontpage() {
               </div>
             ) : (
               posts.map((post) => (
-                <Post key={post.id} post={post} />
+                <Post key={post.id} post={post} authorName={postAuthorName} />
               ))
             )}
           </div>

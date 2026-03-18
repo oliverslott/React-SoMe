@@ -1,4 +1,4 @@
-function Post({ post }) {
+function Post({ post, authorName }) {
   return (
     <article
       className="
@@ -20,7 +20,7 @@ function Post({ post }) {
           text-white/45
         "
       >
-        <span>@dig</span>
+        <span>@{authorName}</span>
         <span>{post.createdAt}</span>
       </div>
 
