@@ -1,7 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import Login from '@/components/login'
 import Register from '@/components/register'
-import Frontpage from '@/components/ui/frontpage'
+import Frontpage from '@/components/frontpage'
 
 function App() {
   return (
