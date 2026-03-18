@@ -1,4 +1,5 @@
 import { useState } from 'react' // hook til state
+import Post from './post'
 
 function Frontpage() {
   const [postText, setPostText] = useState('') // input tekst
@@ -213,42 +214,7 @@ function Frontpage() {
               </div>
             ) : (
               posts.map((post) => (
-                <article
-                  key={post.id}
-                  className="
-                    rounded-[28px]
-                    border
-                    border-white/10
-                    bg-[#141416]
-                    p-5
-                    shadow-lg
-                  "
-                >
-                  <div
-                    className="
-                      mb-3
-                      flex
-                      items-center
-                      justify-between
-                      text-sm
-                      text-white/45
-                    "
-                  >
-                    <span>@dig</span>
-                    <span>{post.createdAt}</span>
-                  </div>
-
-                  <p
-                    className="
-                      whitespace-pre-wrap
-                      text-base
-                      leading-7
-                      text-white/95
-                    "
-                  >
-                    {post.text}
-                  </p>
-                </article>
+                <Post key={post.id} post={post} />
               ))
             )}
           </div>
