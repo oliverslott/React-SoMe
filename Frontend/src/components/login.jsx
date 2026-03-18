@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -9,10 +10,51 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { postJson } from '@/lib/api'
+
+const INITIAL_FORM_DATA = {
+  email: '',
+  password: '',
+}
 
 function Login() {
-  function handleSubmit(event) {
+  const location = useLocation()
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [successMessage, setSuccessMessage] = useState(location.state?.message ?? '')
+  const [loggedInUser, setLoggedInUser] = useState(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  function handleChange(event) {
+    const { name, value } = event.target
+
+    setFormData((currentFormData) => ({
+      ...currentFormData,
+      [name]: value,
+    }))
+  }
+
+  async function handleSubmit(event) {
     event.preventDefault()
+    setErrorMessage('')
+    setSuccessMessage('')
+    setIsSubmitting(true)
+
+    try {
+      const response = await postJson('/login', formData)
+      localStorage.setItem('react-some-user', JSON.stringify(response.user))
+      setLoggedInUser(response.user)
+      setSuccessMessage(`Logged in as ${response.user.name}.`)
+      setFormData((currentFormData) => ({
+        ...currentFormData,
+        password: '',
+      }))
+    } catch (error) {
+      setLoggedInUser(null)
+      setErrorMessage(error.message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -36,9 +78,13 @@ function Login() {
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   placeholder="name@example.com"
                   autoComplete="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
                   required
                 />
               </div>
@@ -46,14 +92,33 @@ function Login() {
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
+                  name="password"
                   type="password"
                   placeholder="Enter your password"
                   autoComplete="current-password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
                   required
                 />
               </div>
-              <Button className="w-full" size="lg" type="submit">
-                Continue
+              {errorMessage ? (
+                <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {errorMessage}
+                </p>
+              ) : null}
+              {successMessage ? (
+                <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700">
+                  {successMessage}
+                </p>
+              ) : null}
+              {loggedInUser ? (
+                <p className="text-sm text-muted-foreground">
+                  Account email: {loggedInUser.email}
+                </p>
+              ) : null}
+              <Button className="w-full" size="lg" type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Logging in...' : 'Continue'}
               </Button>
             </form>
             <p className="mt-4 text-center text-sm text-muted-foreground">

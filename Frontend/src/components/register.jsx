@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -9,10 +10,58 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { postJson } from '@/lib/api'
+
+const INITIAL_FORM_DATA = {
+  name: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+}
 
 function Register() {
-  function handleSubmit(event) {
+  const navigate = useNavigate()
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  function handleChange(event) {
+    const { name, value } = event.target
+
+    setFormData((currentFormData) => ({
+      ...currentFormData,
+      [name]: value,
+    }))
+  }
+
+  async function handleSubmit(event) {
     event.preventDefault()
+    setErrorMessage('')
+
+    if (formData.password !== formData.confirmPassword) {
+      setErrorMessage('Passwords do not match.')
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      await postJson('/register', {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      })
+
+      navigate('/login', {
+        state: {
+          message: 'Account created successfully. You can log in now.',
+        },
+      })
+    } catch (error) {
+      setErrorMessage(error.message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -36,9 +85,13 @@ function Register() {
                 <Label htmlFor="name">Name</Label>
                 <Input
                   id="name"
+                  name="name"
                   type="text"
                   placeholder="Jane Doe"
                   autoComplete="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
                   required
                 />
               </div>
@@ -46,9 +99,13 @@ function Register() {
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   placeholder="name@example.com"
                   autoComplete="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
                   required
                 />
               </div>
@@ -56,24 +113,37 @@ function Register() {
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
+                  name="password"
                   type="password"
                   placeholder="Create a password"
                   autoComplete="new-password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm password</Label>
+                <Label htmlFor="confirmPassword">Confirm password</Label>
                 <Input
-                  id="confirm-password"
+                  id="confirmPassword"
+                  name="confirmPassword"
                   type="password"
                   placeholder="Re-enter your password"
                   autoComplete="new-password"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
                   required
                 />
               </div>
-              <Button className="w-full" size="lg" type="submit">
-                Create account
+              {errorMessage ? (
+                <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {errorMessage}
+                </p>
+              ) : null}
+              <Button className="w-full" size="lg" type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Creating account...' : 'Create account'}
               </Button>
             </form>
             <p className="mt-4 text-center text-sm text-muted-foreground">
