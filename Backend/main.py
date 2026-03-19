@@ -27,6 +27,10 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class CreatePostRequest(BaseModel):
+    content: str
+
+
 def get_connection() -> sqlite3.Connection:
     connection = sqlite3.connect(DATABASE_PATH)
     connection.row_factory = sqlite3.Row
@@ -39,6 +43,16 @@ def user_payload(user: sqlite3.Row) -> dict[str, str | int]:
         "id": user["id"],
         "name": user["name"],
         "email": user["email"],
+    }
+
+
+def post_payload(post: sqlite3.Row) -> dict[str, str | int]:
+    return {
+        "id": post["id"],
+        "user_id": post["user_id"],
+        "content": post["content"],
+        "author_name": post["author_name"],
+        "created_at": post["created_at"],
     }
 
 
@@ -160,6 +174,7 @@ def init_db() -> None:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 content TEXT,
+                created_at TEXT,
                 FOREIGN KEY (user_id) REFERENCES users(id)
                     ON DELETE CASCADE
                     ON UPDATE CASCADE
@@ -215,6 +230,7 @@ app.add_middleware(
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ],
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -310,6 +326,53 @@ def logout_account(request: Request, response: Response):
 
     clear_session_cookie(response)
     return {"message": "Logged out."}
+
+
+@app.post("/posts")
+def create_post(payload: CreatePostRequest, request: Request):
+    user = get_authenticated_user(request)
+    content = payload.content.strip()
+
+    if not content:
+        raise HTTPException(status_code=400, detail="Post content is required.")
+
+    with get_connection() as connection:
+        created_at = now_utc().isoformat()
+        cursor = connection.execute(
+            "INSERT INTO posts (user_id, content, created_at) VALUES (?, ?, ?)",
+            (user["id"], content, created_at),
+        )
+        post = connection.execute(
+            """
+            SELECT posts.id, posts.user_id, posts.content, posts.created_at, users.name AS author_name
+            FROM posts
+            JOIN users ON users.id = posts.user_id
+            WHERE posts.id = ?
+            """,
+            (cursor.lastrowid,),
+        ).fetchone()
+        connection.commit()
+
+    return {
+        "message": "Post created successfully.",
+        "post": post_payload(post),
+        "user": user_payload(user),
+    }
+
+
+@app.get("/posts")
+def read_posts():
+    with get_connection() as connection:
+        posts = connection.execute(
+            """
+            SELECT posts.id, posts.user_id, posts.content, posts.created_at, users.name AS author_name
+            FROM posts
+            JOIN users ON users.id = posts.user_id
+            ORDER BY posts.id DESC
+            """
+        ).fetchall()
+
+    return {"posts": [post_payload(post) for post in posts]}
 
 
 @app.get("/post-author")

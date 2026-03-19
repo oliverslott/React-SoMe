@@ -1,56 +1,104 @@
-import { useEffect, useState } from 'react' // hook til state
-import { getJson } from '@/lib/api'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { getJson, postJson } from '@/lib/api'
 import Post from './post'
 
-function Frontpage() {
-  const [postText, setPostText] = useState('') // input tekst
-  const [posts, setPosts] = useState([]) // liste af opslag
-  const [postAuthorName, setPostAuthorName] = useState('dig')
+function formatPostTime(timestamp) {
+  return new Date(timestamp).toLocaleString('da-DK', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 
-  const onlineUsers = ['Oliver', 'Malthe', 'Hussein', 'Muddi'] // eksempel på online brugere
+function mapApiPost(post) {
+  return {
+    id: post.id,
+    text: post.content,
+    authorName: post.author_name,
+    createdAt: formatPostTime(post.created_at),
+  }
+}
+
+function Frontpage() {
+  const [postText, setPostText] = useState('')
+  const [posts, setPosts] = useState([])
+  const [currentUser, setCurrentUser] = useState(null)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const onlineUsers = ['Oliver', 'Malthe', 'Hussein', 'Muddi']
 
   useEffect(() => {
-    let isMounted = true
+    let isCancelled = false
 
-    async function loadPostAuthor() {
+    async function loadCurrentUser() {
       try {
-        const response = await getJson('/post-author')
+        const response = await getJson('/me')
 
-        if (isMounted) {
-          setPostAuthorName(response.user.name)
+        if (!isCancelled) {
+          setCurrentUser(response.user)
+          setErrorMessage('')
         }
       } catch (error) {
-        console.error('Kunne ikke hente post-forfatter:', error)
+        if (!isCancelled) {
+          setCurrentUser(null)
+        }
       }
     }
 
-    loadPostAuthor()
+    async function loadPosts() {
+      try {
+        const response = await getJson('/posts')
+
+        if (!isCancelled) {
+          setPosts(response.posts.map(mapApiPost))
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setErrorMessage(error.message)
+        }
+      }
+    }
+
+    loadCurrentUser()
+    loadPosts()
 
     return () => {
-      isMounted = false
+      isCancelled = true
     }
   }, [])
 
-  const handleSubmit = (event) => {
-    event.preventDefault() // stop reload
+  async function handleSubmit(event) {
+    event.preventDefault()
+    setErrorMessage('')
 
-    const trimmedPost = postText.trim() // fjern mellemrum
+    const trimmedPost = postText.trim()
 
     if (!trimmedPost) {
-      return // stop hvis tom
+      return
     }
 
-    const newPost = {
-      id: crypto.randomUUID(), // unik id
-      text: trimmedPost, // tekst
-      createdAt: new Date().toLocaleTimeString('da-DK', {
-        hour: '2-digit',
-        minute: '2-digit', // klokkeslæt
-      }),
+    if (!currentUser) {
+      setErrorMessage('Log ind for at oprette et opslag.')
+      return
     }
 
-    setPosts((currentPosts) => [newPost, ...currentPosts]) // nyt først
-    setPostText('') // ryd input
+    setIsSubmitting(true)
+
+    try {
+      const response = await postJson('/posts', {
+        content: trimmedPost,
+      })
+
+      setPosts((currentPosts) => [mapApiPost(response.post), ...currentPosts])
+      setPostText('')
+    } catch (error) {
+      setErrorMessage(error.message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -63,8 +111,6 @@ function Frontpage() {
         text-white
       "
     >
-      {/* baggrund + layout */}
-
       <div
         className="
           mx-auto
@@ -77,9 +123,6 @@ function Frontpage() {
           gap-8
         "
       >
-        {/* container / flex layout */}
-
-        {/* venstre sidepanel */}
         <aside
           className="
             hidden
@@ -100,7 +143,6 @@ function Frontpage() {
           </h2>
         </aside>
 
-        {/* hovedindhold */}
         <section
           className="
             w-full
@@ -114,7 +156,6 @@ function Frontpage() {
             backdrop-blur
           "
         >
-          {/* header / titel */}
           <header className="mb-8 text-center">
             <p
               className="
@@ -138,9 +179,12 @@ function Frontpage() {
             >
               SoMe
             </h1>
+
+            <p className="mt-3 text-sm text-white/55">
+              {currentUser ? `Logget ind som ${currentUser.name}` : 'Du er ikke logget ind endnu.'}
+            </p>
           </header>
 
-          {/* formular */}
           <form
             onSubmit={handleSubmit}
             className="
@@ -152,7 +196,6 @@ function Frontpage() {
               p-5
             "
           >
-            {/* label */}
             <label
               htmlFor="post-text"
               className="
@@ -165,12 +208,12 @@ function Frontpage() {
               Opret et opslag
             </label>
 
-            {/* textarea */}
             <textarea
               id="post-text"
               value={postText}
               onChange={(event) => setPostText(event.target.value)}
               placeholder="Hvad vil du dele i dag?"
+              disabled={isSubmitting || !currentUser}
               className="
                 min-h-32
                 w-full
@@ -189,15 +232,27 @@ function Frontpage() {
               "
             />
 
-            {/* form footer */}
+            {errorMessage ? (
+              <p className="mt-4 rounded-2xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
+                {errorMessage}
+              </p>
+            ) : null}
+
             <div className="mt-4 flex items-center justify-between gap-4">
               <p className="text-sm text-white/45">
-                Tilføj # for at komme på trending.
+                {currentUser ? 'Tilføj # for at komme på trending.' : (
+                  <>
+                    <Link className="underline underline-offset-4" to="/login">
+                      Log ind
+                    </Link>{' '}
+                    for at kunne skrive opslag.
+                  </>
+                )}
               </p>
 
-              {/* submit knap */}
               <button
                 type="submit"
+                disabled={isSubmitting || !currentUser}
                 className="
                   rounded-full
                   border
@@ -210,14 +265,15 @@ function Frontpage() {
                   text-black
                   transition
                   hover:bg-white/90
+                  disabled:cursor-not-allowed
+                  disabled:bg-white/40
                 "
               >
-                Slå op
+                {isSubmitting ? 'Slår op...' : 'Slå op'}
               </button>
             </div>
           </form>
 
-          {/* feed */}
           <div className="space-y-4">
             {posts.length === 0 ? (
               <div
@@ -237,13 +293,12 @@ function Frontpage() {
               </div>
             ) : (
               posts.map((post) => (
-                <Post key={post.id} post={post} authorName={postAuthorName} />
+                <Post key={post.id} post={post} />
               ))
             )}
           </div>
         </section>
 
-        {/* højre sidepanel */}
         <aside
           className="
             hidden
