@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { postJson } from '@/lib/api'
+import { getJson, postJson } from '@/lib/api'
 
 const INITIAL_FORM_DATA = {
   email: '',
@@ -24,6 +24,7 @@ function Login() {
   const [successMessage, setSuccessMessage] = useState(location.state?.message ?? '')
   const [loggedInUser, setLoggedInUser] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isCheckingSession, setIsCheckingSession] = useState(true)
 
   function handleChange(event) {
     const { name, value } = event.target
@@ -34,6 +35,38 @@ function Login() {
     }))
   }
 
+  useEffect(() => {
+    let isCancelled = false
+
+    async function loadCurrentUser() {
+      try {
+        const response = await getJson('/me')
+
+        if (isCancelled) {
+          return
+        }
+
+        setLoggedInUser(response.user)
+      } catch (error) {
+        if (isCancelled) {
+          return
+        }
+
+        setLoggedInUser(null)
+      } finally {
+        if (!isCancelled) {
+          setIsCheckingSession(false)
+        }
+      }
+    }
+
+    loadCurrentUser()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [])
+
   async function handleSubmit(event) {
     event.preventDefault()
     setErrorMessage('')
@@ -42,7 +75,6 @@ function Login() {
 
     try {
       const response = await postJson('/login', formData)
-      localStorage.setItem('react-some-user', JSON.stringify(response.user))
       setLoggedInUser(response.user)
       setSuccessMessage(`Logged in as ${response.user.name}.`)
       setFormData((currentFormData) => ({
@@ -51,6 +83,22 @@ function Login() {
       }))
     } catch (error) {
       setLoggedInUser(null)
+      setErrorMessage(error.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function handleLogout() {
+    setErrorMessage('')
+    setSuccessMessage('')
+    setIsSubmitting(true)
+
+    try {
+      await postJson('/logout')
+      setLoggedInUser(null)
+      setSuccessMessage('You have been logged out.')
+    } catch (error) {
       setErrorMessage(error.message)
     } finally {
       setIsSubmitting(false)
@@ -117,9 +165,24 @@ function Login() {
                   Account email: {loggedInUser.email}
                 </p>
               ) : null}
+              {isCheckingSession ? (
+                <p className="text-sm text-muted-foreground">Checking session...</p>
+              ) : null}
               <Button className="w-full" size="lg" type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Logging in...' : 'Continue'}
               </Button>
+              {loggedInUser ? (
+                <Button
+                  className="w-full"
+                  size="lg"
+                  type="button"
+                  variant="outline"
+                  onClick={handleLogout}
+                  disabled={isSubmitting}
+                >
+                  Log out
+                </Button>
+              ) : null}
             </form>
             <p className="mt-4 text-center text-sm text-muted-foreground">
               Need an account?{' '}
