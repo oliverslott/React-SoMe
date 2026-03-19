@@ -1,4 +1,6 @@
-function Post({ post, authorName }) {
+import CommentSection from './comment-section'
+
+function Post({ post, authorName, commenterName, onAddComment }) {
   return (
     <article
       className="
@@ -34,6 +36,12 @@ function Post({ post, authorName }) {
       >
         {post.text}
       </p>
+
+      <CommentSection
+        comments={post.comments}
+        commenterName={commenterName}
+        onAddComment={(commentText) => onAddComment(post.id, commentText)}
+      />
     </article>
   )
 }

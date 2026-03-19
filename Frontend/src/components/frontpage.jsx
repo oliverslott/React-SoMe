@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react' // hook til state
+import { useEffect, useState } from 'react'
 import { getJson } from '@/lib/api'
 import Post from './post'
 
 function Frontpage() {
-  const [postText, setPostText] = useState('') // input tekst
-  const [posts, setPosts] = useState([]) // liste af opslag
+  const [postText, setPostText] = useState('')
+  const [posts, setPosts] = useState([])
   const [postAuthorName, setPostAuthorName] = useState('dig')
 
-  const onlineUsers = ['Oliver', 'Malthe', 'Hussein', 'Muddi'] // eksempel på online brugere
+  const onlineUsers = ['Oliver', 'Malthe', 'Hussein', 'Muddi']
 
   useEffect(() => {
     let isMounted = true
@@ -32,25 +32,49 @@ function Frontpage() {
   }, [])
 
   const handleSubmit = (event) => {
-    event.preventDefault() // stop reload
+    event.preventDefault()
 
-    const trimmedPost = postText.trim() // fjern mellemrum
+    const trimmedPost = postText.trim()
 
     if (!trimmedPost) {
-      return // stop hvis tom
+      return
     }
 
     const newPost = {
-      id: crypto.randomUUID(), // unik id
-      text: trimmedPost, // tekst
+      id: crypto.randomUUID(),
+      text: trimmedPost,
+      comments: [],
       createdAt: new Date().toLocaleTimeString('da-DK', {
         hour: '2-digit',
-        minute: '2-digit', // klokkeslæt
+        minute: '2-digit',
       }),
     }
 
-    setPosts((currentPosts) => [newPost, ...currentPosts]) // nyt først
-    setPostText('') // ryd input
+    setPosts((currentPosts) => [newPost, ...currentPosts])
+    setPostText('')
+  }
+
+  const handleAddComment = (postId, commentText) => {
+    const newComment = {
+      id: crypto.randomUUID(),
+      authorName: postAuthorName,
+      text: commentText,
+      createdAt: new Date().toLocaleTimeString('da-DK', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    }
+
+    setPosts((currentPosts) =>
+      currentPosts.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              comments: [...post.comments, newComment],
+            }
+          : post
+      )
+    )
   }
 
   return (
@@ -63,8 +87,6 @@ function Frontpage() {
         text-white
       "
     >
-      {/* baggrund + layout */}
-
       <div
         className="
           mx-auto
@@ -77,9 +99,6 @@ function Frontpage() {
           gap-8
         "
       >
-        {/* container / flex layout */}
-
-        {/* venstre sidepanel */}
         <aside
           className="
             hidden
@@ -95,12 +114,9 @@ function Frontpage() {
             md:block
           "
         >
-          <h2 className="mb-4 text-lg font-semibold text-white">
-            #Trending
-          </h2>
+          <h2 className="mb-4 text-lg font-semibold text-white">#Trending</h2>
         </aside>
 
-        {/* hovedindhold */}
         <section
           className="
             w-full
@@ -114,19 +130,7 @@ function Frontpage() {
             backdrop-blur
           "
         >
-          {/* header / titel */}
           <header className="mb-8 text-center">
-            <p
-              className="
-                text-sm
-                uppercase
-                tracking-[0.45em]
-                text-white/45
-              "
-            >
-              Jeg ved ikke hvad der skal stå her
-            </p>
-
             <h1
               className="
                 mt-3
@@ -138,9 +142,19 @@ function Frontpage() {
             >
               SoMe
             </h1>
+
+            <p
+              className="
+                text-sm
+                uppercase
+                tracking-[0.45em]
+                text-white/45
+              "
+            >
+              What is happening today?
+            </p>
           </header>
 
-          {/* formular */}
           <form
             onSubmit={handleSubmit}
             className="
@@ -152,7 +166,6 @@ function Frontpage() {
               p-5
             "
           >
-            {/* label */}
             <label
               htmlFor="post-text"
               className="
@@ -165,7 +178,6 @@ function Frontpage() {
               Opret et opslag
             </label>
 
-            {/* textarea */}
             <textarea
               id="post-text"
               value={postText}
@@ -189,13 +201,9 @@ function Frontpage() {
               "
             />
 
-            {/* form footer */}
             <div className="mt-4 flex items-center justify-between gap-4">
-              <p className="text-sm text-white/45">
-                Tilføj # for at komme på trending.
-              </p>
+              <p className="text-sm text-white/45">Tilføj # for at komme på trending.</p>
 
-              {/* submit knap */}
               <button
                 type="submit"
                 className="
@@ -217,7 +225,6 @@ function Frontpage() {
             </div>
           </form>
 
-          {/* feed */}
           <div className="space-y-4">
             {posts.length === 0 ? (
               <div
@@ -237,13 +244,18 @@ function Frontpage() {
               </div>
             ) : (
               posts.map((post) => (
-                <Post key={post.id} post={post} authorName={postAuthorName} />
+                <Post
+                  key={post.id}
+                  post={post}
+                  authorName={postAuthorName}
+                  commenterName={postAuthorName}
+                  onAddComment={handleAddComment}
+                />
               ))
             )}
           </div>
         </section>
 
-        {/* højre sidepanel */}
         <aside
           className="
             hidden
@@ -259,9 +271,7 @@ function Frontpage() {
             xl:block
           "
         >
-          <h2 className="mb-4 text-lg font-semibold text-white">
-            Online:
-          </h2>
+          <h2 className="mb-4 text-lg font-semibold text-white">Online:</h2>
 
           <div className="space-y-3">
             {onlineUsers.map((user) => (
