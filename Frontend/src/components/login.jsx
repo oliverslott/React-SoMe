@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -19,6 +19,7 @@ const INITIAL_FORM_DATA = {
 
 function Login() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [formData, setFormData] = useState(INITIAL_FORM_DATA)
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState(location.state?.message ?? '')
@@ -76,11 +77,7 @@ function Login() {
     try {
       const response = await postJson('/login', formData)
       setLoggedInUser(response.user)
-      setSuccessMessage(`Logged in as ${response.user.name}.`)
-      setFormData((currentFormData) => ({
-        ...currentFormData,
-        password: '',
-      }))
+      navigate('/', { replace: true })
     } catch (error) {
       setLoggedInUser(null)
       setErrorMessage(error.message)
