@@ -44,6 +44,7 @@ function Frontpage() {
       id: crypto.randomUUID(),
       text: trimmedPost,
       liked: false,
+      likeCount: 0,
       comments: [],
       createdAt: new Date().toLocaleTimeString('da-DK', {
         hour: '2-digit',
@@ -85,6 +86,7 @@ function Frontpage() {
           ? {
               ...post,
               liked: !post.liked,
+              likeCount: post.liked ? Math.max(0, post.likeCount - 1) : post.likeCount + 1,
             }
           : post
       )
