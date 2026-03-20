@@ -18,6 +18,9 @@ function mapApiPost(post) {
     text: post.content,
     authorName: post.author_name,
     createdAt: formatPostTime(post.created_at),
+    liked: false,
+    likeCount: 0,
+    comments: [],
   }
 }
 
@@ -27,7 +30,6 @@ function Frontpage() {
   const [currentUser, setCurrentUser] = useState(null)
   const [errorMessage, setErrorMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-
   const onlineUsers = ['Oliver', 'Malthe', 'Hussein', 'Muddi']
 
   useEffect(() => {
@@ -41,7 +43,7 @@ function Frontpage() {
           setCurrentUser(response.user)
           setErrorMessage('')
         }
-      } catch (error) {
+      } catch {
         if (!isCancelled) {
           setCurrentUser(null)
         }
@@ -101,6 +103,57 @@ function Frontpage() {
     }
   }
 
+  function handleAddComment(postId, commentText) {
+    if (!currentUser) {
+      setErrorMessage('Log ind for at kommentere opslag.')
+      return
+    }
+
+    setErrorMessage('')
+
+    const newComment = {
+      id: crypto.randomUUID(),
+      authorName: currentUser.name,
+      text: commentText,
+      createdAt: new Date().toLocaleTimeString('da-DK', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    }
+
+    setPosts((currentPosts) =>
+      currentPosts.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              comments: [...post.comments, newComment],
+            }
+          : post
+      )
+    )
+  }
+
+  function handleToggleLike(postId) {
+    if (!currentUser) {
+      setErrorMessage('Log ind for at like opslag.')
+      return
+    }
+
+    setErrorMessage('')
+
+    setPosts((currentPosts) =>
+      currentPosts.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              liked: !post.liked,
+              likeCount: post.liked ? Math.max(0, post.likeCount - 1) : post.likeCount + 1,
+            }
+          : post
+      )
+    )
+  }
+
   return (
     <main
       className="
@@ -138,9 +191,7 @@ function Frontpage() {
             md:block
           "
         >
-          <h2 className="mb-4 text-lg font-semibold text-white">
-            #Trending
-          </h2>
+          <h2 className="mb-4 text-lg font-semibold text-white">#Trending</h2>
         </aside>
 
         <section
@@ -157,17 +208,6 @@ function Frontpage() {
           "
         >
           <header className="mb-8 text-center">
-            <p
-              className="
-                text-sm
-                uppercase
-                tracking-[0.45em]
-                text-white/45
-              "
-            >
-              Jeg ved ikke hvad der skal stå her
-            </p>
-
             <h1
               className="
                 mt-3
@@ -179,6 +219,17 @@ function Frontpage() {
             >
               SoMe
             </h1>
+
+            <p
+              className="
+                text-sm
+                uppercase
+                tracking-[0.45em]
+                text-white/45
+              "
+            >
+              What is happening today?
+            </p>
 
             <p className="mt-3 text-sm text-white/55">
               {currentUser ? `Logget ind som ${currentUser.name}` : 'Du er ikke logget ind endnu.'}
@@ -293,7 +344,14 @@ function Frontpage() {
               </div>
             ) : (
               posts.map((post) => (
-                <Post key={post.id} post={post} />
+                <Post
+                  key={post.id}
+                  post={post}
+                  commenterName={currentUser?.name ?? 'gæst'}
+                  commentsDisabled={!currentUser}
+                  onAddComment={handleAddComment}
+                  onToggleLike={handleToggleLike}
+                />
               ))
             )}
           </div>
@@ -314,9 +372,7 @@ function Frontpage() {
             xl:block
           "
         >
-          <h2 className="mb-4 text-lg font-semibold text-white">
-            Online:
-          </h2>
+          <h2 className="mb-4 text-lg font-semibold text-white">Online:</h2>
 
           <div className="space-y-3">
             {onlineUsers.map((user) => (

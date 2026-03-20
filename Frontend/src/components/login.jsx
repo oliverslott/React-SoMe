@@ -48,7 +48,7 @@ function Login() {
         }
 
         setLoggedInUser(response.user)
-      } catch (error) {
+      } catch {
         if (isCancelled) {
           return
         }
