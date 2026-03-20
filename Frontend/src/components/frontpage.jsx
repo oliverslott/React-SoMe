@@ -43,6 +43,7 @@ function Frontpage() {
     const newPost = {
       id: crypto.randomUUID(),
       text: trimmedPost,
+      liked: false,
       comments: [],
       createdAt: new Date().toLocaleTimeString('da-DK', {
         hour: '2-digit',
@@ -71,6 +72,19 @@ function Frontpage() {
           ? {
               ...post,
               comments: [...post.comments, newComment],
+            }
+          : post
+      )
+    )
+  }
+
+  const handleToggleLike = (postId) => {
+    setPosts((currentPosts) =>
+      currentPosts.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              liked: !post.liked,
             }
           : post
       )
@@ -250,6 +264,7 @@ function Frontpage() {
                   authorName={postAuthorName}
                   commenterName={postAuthorName}
                   onAddComment={handleAddComment}
+                  onToggleLike={handleToggleLike}
                 />
               ))
             )}

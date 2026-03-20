@@ -1,6 +1,6 @@
 import CommentSection from './comment-section'
 
-function Post({ post, authorName, commenterName, onAddComment }) {
+function Post({ post, authorName, commenterName, onAddComment, onToggleLike }) {
   return (
     <article
       className="
@@ -36,6 +36,29 @@ function Post({ post, authorName, commenterName, onAddComment }) {
       >
         {post.text}
       </p>
+
+      <div className="mt-4">
+        <button
+          type="button"
+          onClick={() => onToggleLike(post.id)}
+          className={`
+            rounded-full
+            border
+            px-4
+            py-2
+            text-sm
+            font-semibold
+            transition
+            ${
+              post.liked
+                ? 'border-red-500/70 bg-red-500/15 text-red-400'
+                : 'border-white/10 bg-white/[0.03] text-white/75 hover:border-white/20 hover:bg-white/[0.06]'
+            }
+          `}
+        >
+          Like
+        </button>
+      </div>
 
       <CommentSection
         comments={post.comments}
