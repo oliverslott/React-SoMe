@@ -5,7 +5,7 @@ function CommentSection({ comments, commenterName, onAddComment, disabled = fals
   const inputId = useId()
   const [commentText, setCommentText] = useState('')
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
 
     if (disabled) {
@@ -18,8 +18,12 @@ function CommentSection({ comments, commenterName, onAddComment, disabled = fals
       return
     }
 
-    onAddComment(trimmedComment)
-    setCommentText('')
+    try {
+      await onAddComment(trimmedComment)
+      setCommentText('')
+    } catch {
+      // Frontpage shows the user-facing error message.
+    }
   }
 
   return (

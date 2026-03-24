@@ -18,9 +18,14 @@ function mapApiPost(post) {
     text: post.content,
     authorName: post.author_name,
     createdAt: formatPostTime(post.created_at),
-    liked: false,
-    likeCount: 0,
-    comments: [],
+    liked: post.liked_by_current_user ?? false,
+    likeCount: post.like_count ?? 0,
+    comments: (post.comments ?? []).map((comment) => ({
+      id: comment.id,
+      authorName: comment.author_name,
+      text: comment.content,
+      createdAt: formatPostTime(comment.created_at),
+    })),
   }
 }
 
@@ -103,37 +108,43 @@ function Frontpage() {
     }
   }
 
-  function handleAddComment(postId, commentText) {
+  async function handleAddComment(postId, commentText) {
     if (!currentUser) {
       setErrorMessage('Log ind for at kommentere opslag.')
-      return
+      throw new Error('Not authenticated.')
     }
 
     setErrorMessage('')
 
-    const newComment = {
-      id: crypto.randomUUID(),
-      authorName: currentUser.name,
-      text: commentText,
-      createdAt: new Date().toLocaleTimeString('da-DK', {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-    }
+    try {
+      const response = await postJson(`/posts/${postId}/comments`, {
+        content: commentText,
+      })
 
-    setPosts((currentPosts) =>
-      currentPosts.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              comments: [...post.comments, newComment],
-            }
-          : post
+      const newComment = {
+        id: response.comment.id,
+        authorName: response.comment.author_name,
+        text: response.comment.content,
+        createdAt: formatPostTime(response.comment.created_at),
+      }
+
+      setPosts((currentPosts) =>
+        currentPosts.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                comments: [...post.comments, newComment],
+              }
+            : post
+        )
       )
-    )
+    } catch (error) {
+      setErrorMessage(error.message)
+      throw error
+    }
   }
 
-  function handleToggleLike(postId) {
+  async function handleToggleLike(postId) {
     if (!currentUser) {
       setErrorMessage('Log ind for at like opslag.')
       return
@@ -141,17 +152,23 @@ function Frontpage() {
 
     setErrorMessage('')
 
-    setPosts((currentPosts) =>
-      currentPosts.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              liked: !post.liked,
-              likeCount: post.liked ? Math.max(0, post.likeCount - 1) : post.likeCount + 1,
-            }
-          : post
+    try {
+      const response = await postJson(`/posts/${postId}/likes`)
+
+      setPosts((currentPosts) =>
+        currentPosts.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                liked: response.liked,
+                likeCount: response.like_count,
+              }
+            : post
+        )
       )
-    )
+    } catch (error) {
+      setErrorMessage(error.message)
+    }
   }
 
   return (
