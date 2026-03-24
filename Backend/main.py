@@ -31,6 +31,10 @@ class CreatePostRequest(BaseModel):
     content: str
 
 
+class CreateCommentRequest(BaseModel):
+    content: str
+
+
 def get_connection() -> sqlite3.Connection:
     connection = sqlite3.connect(DATABASE_PATH)
     connection.row_factory = sqlite3.Row
@@ -53,6 +57,17 @@ def post_payload(post: sqlite3.Row) -> dict[str, str | int]:
         "content": post["content"],
         "author_name": post["author_name"],
         "created_at": post["created_at"],
+    }
+
+
+def comment_payload(comment: sqlite3.Row) -> dict[str, str | int]:
+    return {
+        "id": comment["id"],
+        "post_id": comment["post_id"],
+        "user_id": comment["user_id"],
+        "content": comment["content"],
+        "author_name": comment["author_name"],
+        "created_at": comment["created_at"],
     }
 
 
@@ -153,6 +168,80 @@ def get_authenticated_user(request: Request) -> sqlite3.Row:
     return user
 
 
+def get_optional_authenticated_user(request: Request) -> sqlite3.Row | None:
+    try:
+        return get_authenticated_user(request)
+    except HTTPException:
+        return None
+
+
+def ensure_column_exists(connection: sqlite3.Connection, table_name: str, column_name: str, definition: str) -> None:
+    columns = connection.execute(f"PRAGMA table_info({table_name})").fetchall()
+
+    if any(column["name"] == column_name for column in columns):
+        return
+
+    connection.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {definition}")
+
+
+def fetch_comments_by_post_id(connection: sqlite3.Connection) -> dict[int, list[dict[str, str | int]]]:
+    comments = connection.execute(
+        """
+        SELECT comments.id, comments.post_id, comments.user_id, comments.content, comments.created_at, users.name AS author_name
+        FROM comments
+        JOIN users ON users.id = comments.user_id
+        ORDER BY comments.id ASC
+        """
+    ).fetchall()
+
+    comments_by_post_id: dict[int, list[dict[str, str | int]]] = {}
+
+    for comment in comments:
+        comments_by_post_id.setdefault(comment["post_id"], []).append(comment_payload(comment))
+
+    return comments_by_post_id
+
+
+def fetch_like_counts_by_post_id(connection: sqlite3.Connection) -> dict[int, int]:
+    like_rows = connection.execute(
+        """
+        SELECT post_id, COUNT(*) AS like_count
+        FROM post_likes
+        GROUP BY post_id
+        """
+    ).fetchall()
+    return {row["post_id"]: row["like_count"] for row in like_rows}
+
+
+def fetch_liked_post_ids(connection: sqlite3.Connection, user_id: int | None) -> set[int]:
+    if user_id is None:
+        return set()
+
+    liked_rows = connection.execute(
+        """
+        SELECT post_id
+        FROM post_likes
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    ).fetchall()
+    return {row["post_id"] for row in liked_rows}
+
+
+def serialize_post(
+    post: sqlite3.Row,
+    *,
+    comments_by_post_id: dict[int, list[dict[str, str | int]]],
+    like_counts_by_post_id: dict[int, int],
+    liked_post_ids: set[int],
+) -> dict[str, str | int | list[dict[str, str | int]] | bool]:
+    payload = post_payload(post)
+    payload["comments"] = comments_by_post_id.get(post["id"], [])
+    payload["like_count"] = like_counts_by_post_id.get(post["id"], 0)
+    payload["liked_by_current_user"] = post["id"] in liked_post_ids
+    return payload
+
+
 def init_db() -> None:
     with get_connection() as connection:
         cursor = connection.cursor()
@@ -189,6 +278,7 @@ def init_db() -> None:
                 post_id INTEGER NOT NULL,
                 user_id INTEGER NOT NULL,
                 content TEXT NOT NULL,
+                created_at TEXT,
                 FOREIGN KEY (post_id) REFERENCES posts(id)
                     ON DELETE CASCADE
                     ON UPDATE CASCADE,
@@ -215,6 +305,7 @@ def init_db() -> None:
             """
         )
 
+        ensure_column_exists(connection, "comments", "created_at", "TEXT")
         cursor.execute("DROP TABLE IF EXISTS sessions")
 
         connection.commit()
@@ -351,17 +442,120 @@ def create_post(payload: CreatePostRequest, request: Request):
             """,
             (cursor.lastrowid,),
         ).fetchone()
+        comments_by_post_id = fetch_comments_by_post_id(connection)
+        like_counts_by_post_id = fetch_like_counts_by_post_id(connection)
+        liked_post_ids = fetch_liked_post_ids(connection, user["id"])
         connection.commit()
 
     return {
         "message": "Post created successfully.",
-        "post": post_payload(post),
+        "post": serialize_post(
+            post,
+            comments_by_post_id=comments_by_post_id,
+            like_counts_by_post_id=like_counts_by_post_id,
+            liked_post_ids=liked_post_ids,
+        ),
         "user": user_payload(user),
     }
 
 
+@app.post("/posts/{post_id}/comments")
+def create_comment(post_id: int, payload: CreateCommentRequest, request: Request):
+    user = get_authenticated_user(request)
+    content = payload.content.strip()
+
+    if not content:
+        raise HTTPException(status_code=400, detail="Comment content is required.")
+
+    with get_connection() as connection:
+        post = connection.execute(
+            "SELECT id FROM posts WHERE id = ?",
+            (post_id,),
+        ).fetchone()
+
+        if post is None:
+            raise HTTPException(status_code=404, detail="Post not found.")
+
+        created_at = now_utc().isoformat()
+        cursor = connection.execute(
+            "INSERT INTO comments (post_id, user_id, content, created_at) VALUES (?, ?, ?, ?)",
+            (post_id, user["id"], content, created_at),
+        )
+        comment = connection.execute(
+            """
+            SELECT comments.id, comments.post_id, comments.user_id, comments.content, comments.created_at, users.name AS author_name
+            FROM comments
+            JOIN users ON users.id = comments.user_id
+            WHERE comments.id = ?
+            """,
+            (cursor.lastrowid,),
+        ).fetchone()
+        connection.commit()
+
+    return {
+        "message": "Comment created successfully.",
+        "comment": comment_payload(comment),
+    }
+
+
+@app.post("/posts/{post_id}/likes")
+def toggle_post_like(post_id: int, request: Request):
+    user = get_authenticated_user(request)
+
+    with get_connection() as connection:
+        post = connection.execute(
+            "SELECT id FROM posts WHERE id = ?",
+            (post_id,),
+        ).fetchone()
+
+        if post is None:
+            raise HTTPException(status_code=404, detail="Post not found.")
+
+        existing_like = connection.execute(
+            """
+            SELECT 1
+            FROM post_likes
+            WHERE user_id = ? AND post_id = ?
+            """,
+            (user["id"], post_id),
+        ).fetchone()
+
+        if existing_like is None:
+            connection.execute(
+                "INSERT INTO post_likes (user_id, post_id) VALUES (?, ?)",
+                (user["id"], post_id),
+            )
+            liked = True
+        else:
+            connection.execute(
+                "DELETE FROM post_likes WHERE user_id = ? AND post_id = ?",
+                (user["id"], post_id),
+            )
+            liked = False
+
+        like_count_row = connection.execute(
+            """
+            SELECT COUNT(*) AS like_count
+            FROM post_likes
+            WHERE post_id = ?
+            """,
+            (post_id,),
+        ).fetchone()
+        connection.commit()
+
+    return {
+        "message": "Post like updated successfully.",
+        "post_id": post_id,
+        "liked": liked,
+        "like_count": like_count_row["like_count"],
+    }
+
+
 @app.get("/posts")
-def read_posts():
+def read_posts(request: Request):
+    current_user = get_optional_authenticated_user(request)
+    current_user_id = None if current_user is None else current_user["id"]
+
     with get_connection() as connection:
         posts = connection.execute(
             """
@@ -371,8 +565,21 @@ def read_posts():
             ORDER BY posts.id DESC
             """
         ).fetchall()
+        comments_by_post_id = fetch_comments_by_post_id(connection)
+        like_counts_by_post_id = fetch_like_counts_by_post_id(connection)
+        liked_post_ids = fetch_liked_post_ids(connection, current_user_id)
 
-    return {"posts": [post_payload(post) for post in posts]}
+    return {
+        "posts": [
+            serialize_post(
+                post,
+                comments_by_post_id=comments_by_post_id,
+                like_counts_by_post_id=like_counts_by_post_id,
+                liked_post_ids=liked_post_ids,
+            )
+            for post in posts
+        ]
+    }
 
 
 @app.get("/post-author")
