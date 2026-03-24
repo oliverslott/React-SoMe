@@ -30,7 +30,6 @@ function Frontpage() {
   const [currentUser, setCurrentUser] = useState(null)
   const [errorMessage, setErrorMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const onlineUsers = ['Oliver', 'Malthe', 'Hussein', 'Muddi']
 
   useEffect(() => {
     let isCancelled = false
@@ -207,33 +206,56 @@ function Frontpage() {
             backdrop-blur
           "
         >
-          <header className="mb-8 text-center">
-            <h1
-              className="
-                mt-3
-                text-5xl
-                font-semibold
-                tracking-[0.08em]
-                text-white
-              "
-            >
-              SoMe
-            </h1>
+          <header className="mb-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+            <div className="text-center md:text-left">
+              <h1
+                className="
+                  mt-3
+                  text-5xl
+                  font-semibold
+                  tracking-[0.08em]
+                  text-white
+                "
+              >
+                SoMe
+              </h1>
 
-            <p
-              className="
-                text-sm
-                uppercase
-                tracking-[0.45em]
-                text-white/45
-              "
-            >
-              What is happening today?
-            </p>
+              <p
+                className="
+                  text-sm
+                  uppercase
+                  tracking-[0.45em]
+                  text-white/45
+                "
+              >
+                What is happening today?
+              </p>
+            </div>
 
-            <p className="mt-3 text-sm text-white/55">
-              {currentUser ? `Logget ind som ${currentUser.name}` : 'Du er ikke logget ind endnu.'}
-            </p>
+            {currentUser ? (
+              <div className="self-center rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-3 md:min-w-64 md:self-start">
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/45">Logget ind som</p>
+                <div className="mt-3 flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-sm font-semibold text-white">
+                    {currentUser.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-white">{currentUser.name}</p>
+                    <p className="truncate text-xs text-white/55">{currentUser.email}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="self-center rounded-[24px] border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-center md:self-start md:text-left">
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/45">Profil</p>
+                <p className="mt-2 text-sm text-white/60">
+                  <Link className="underline underline-offset-4" to="/login">
+                    Log ind
+                  </Link>{' '}
+                  for at se din bruger her.
+                </p>
+              </div>
+            )}
           </header>
 
           <form
@@ -356,36 +378,6 @@ function Frontpage() {
             )}
           </div>
         </section>
-
-        <aside
-          className="
-            hidden
-            min-h-[720px]
-            w-64
-            rounded-[32px]
-            border
-            border-white/10
-            bg-white/[0.03]
-            p-6
-            shadow-2xl
-            backdrop-blur
-            xl:block
-          "
-        >
-          <h2 className="mb-4 text-lg font-semibold text-white">Online:</h2>
-
-          <div className="space-y-3">
-            {onlineUsers.map((user) => (
-              <div
-                key={user}
-                className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3"
-              >
-                <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
-                <span className="text-sm text-white/85">{user}</span>
-              </div>
-            ))}
-          </div>
-        </aside>
       </div>
     </main>
   )
