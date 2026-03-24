@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import Comment from './comment'
 
 function CommentSection({ comments, commenterName, onAddComment, disabled = false }) {
   const inputId = useId()
@@ -83,19 +84,7 @@ function CommentSection({ comments, commenterName, onAddComment, disabled = fals
       {comments.length > 0 ? (
         <div className="mt-4 space-y-3">
           {comments.map((comment) => (
-            <article
-              key={comment.id}
-              className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3"
-            >
-              <div className="mb-1 flex items-center justify-between text-xs text-white/45">
-                <span>@{comment.authorName}</span>
-                <span>{comment.createdAt}</span>
-              </div>
-
-              <p className="whitespace-pre-wrap text-sm leading-6 text-white/85">
-                {comment.text}
-              </p>
-            </article>
+            <Comment key={comment.id} comment={comment} />
           ))}
         </div>
       ) : null}
