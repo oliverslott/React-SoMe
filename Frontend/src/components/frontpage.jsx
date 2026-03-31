@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getJson, postJson } from '@/lib/api'
 import Post from './post'
+import { useNavigate } from 'react-router-dom'
 
 function formatPostTime(timestamp) {
   return new Date(timestamp).toLocaleString('da-DK', {
@@ -30,6 +31,7 @@ function mapApiPost(post) {
 }
 
 function Frontpage() {
+  const navigate = useNavigate();
   const [postText, setPostText] = useState('')
   const [posts, setPosts] = useState([])
   const [currentUser, setCurrentUser] = useState(null)
@@ -252,7 +254,8 @@ function Frontpage() {
             {currentUser ? (
               <div className="self-center rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-3 md:min-w-64 md:self-start">
                 <p className="text-[11px] uppercase tracking-[0.28em] text-white/45">Logget ind som</p>
-                <div className="mt-3 flex items-center gap-3">
+                <div className="mt-3 flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-sm font-semibold text-white">
                     {currentUser.name.charAt(0).toUpperCase()}
                   </div>
@@ -260,6 +263,14 @@ function Frontpage() {
                     <p className="truncate text-sm font-medium text-white">{currentUser.name}</p>
                     <p className="truncate text-xs text-white/55">{currentUser.email}</p>
                   </div>
+                </div>
+
+                  <button
+                  onClick={() => navigate("/profile")}
+                  className="text-xs underline text-white/70"
+                  >
+                    Go to profile
+                  </button>
                 </div>
               </div>
             ) : (
