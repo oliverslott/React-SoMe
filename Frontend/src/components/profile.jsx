@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function Profile() {
     const [name, setName] = useState("");
+    const navigate = useNavigate();
 
     async function handleSubmit(e) {
         e.preventDefault();
@@ -31,6 +33,10 @@ export default function Profile() {
              
              <button type="submit">Change Name</button>
             </form>
+
+        <button onClick={() => navigate("/")}>
+            Back to homepage
+        </button>
         </div>
     );
 }
