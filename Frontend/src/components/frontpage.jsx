@@ -29,6 +29,11 @@ function mapApiPost(post) {
   }
 }
 
+function extractHashtags(text) {
+  const hashtags = text.match(/#\w+/g) || [];
+  return hashtags;
+}
+
 function Frontpage() {
   const navigate = useNavigate()
   const [postText, setPostText] = useState('')
@@ -248,15 +253,20 @@ function Frontpage() {
         >
           <h2 className="mb-4 text-lg font-semibold text-white">#Trending</h2>
           <div className="space-y-3">
-            {trendingPosts.slice(0, 5).map((post) => (
-              <div key={post.id} className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-xs text-white/80 overflow-hidden" style={{display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical'}}>{post.text}</p>
-                <div className="mt-2 flex items-center justify-between text-xs text-white/60">
-                  <span>{post.authorName}</span>
-                  <span>{post.likeCount} likes</span>
+            {trendingPosts.slice(0, 5).map((post) => {
+              const hashtags = extractHashtags(post.text);
+              return hashtags.length > 0 ? (
+                <div key={post.id} className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                  <p className="text-xs text-white/80 overflow-hidden" style={{display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical'}}>
+                    {hashtags.join(' ')}
+                  </p>
+                  <div className="mt-2 flex items-center justify-between text-xs text-white/60">
+                    <span>{post.authorName}</span>
+                    <span>{post.likeCount} likes</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ) : null;
+            }).filter(Boolean)}
             {trendingPosts.length === 0 && (
               <p className="text-sm text-white/60">Ingen trending opslag endnu</p>
             )}
