@@ -582,6 +582,39 @@ def read_posts(request: Request):
     }
 
 
+@app.get("/posts/trending")
+def read_trending_posts(request: Request):
+    current_user = get_optional_authenticated_user(request)
+    current_user_id = None if current_user is None else current_user["id"]
+
+    with get_connection() as connection:
+        # Get posts that contain hashtags
+        posts = connection.execute(
+            """
+            SELECT posts.id, posts.user_id, posts.content, posts.created_at, users.name AS author_name
+            FROM posts
+            JOIN users ON users.id = posts.user_id
+            WHERE posts.content LIKE '%#%'
+            ORDER BY posts.id DESC
+            """
+        ).fetchall()
+        comments_by_post_id = fetch_comments_by_post_id(connection)
+        like_counts_by_post_id = fetch_like_counts_by_post_id(connection)
+        liked_post_ids = fetch_liked_post_ids(connection, current_user_id)
+
+    return {
+        "posts": [
+            serialize_post(
+                post,
+                comments_by_post_id=comments_by_post_id,
+                like_counts_by_post_id=like_counts_by_post_id,
+                liked_post_ids=liked_post_ids,
+            )
+            for post in posts
+        ]
+    }
+
+
 @app.get("/post-author")
 def get_post_author():
     hardcoded_user_id = 1

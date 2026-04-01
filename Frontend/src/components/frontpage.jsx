@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { getJson, postJson } from '@/lib/api'
 import Post from './post'
 
@@ -29,12 +29,20 @@ function mapApiPost(post) {
   }
 }
 
+function extractHashtags(text) {
+  const hashtags = text.match(/#\w+/g) || [];
+  return hashtags;
+}
+
 function Frontpage() {
+  const navigate = useNavigate()
   const [postText, setPostText] = useState('')
   const [posts, setPosts] = useState([])
+  const [trendingPosts, setTrendingPosts] = useState([])
   const [currentUser, setCurrentUser] = useState(null)
   const [errorMessage, setErrorMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [activeTab, setActiveTab] = useState('all') // 'all' or 'trending'
 
   useEffect(() => {
     let isCancelled = false
@@ -54,9 +62,10 @@ function Frontpage() {
       }
     }
 
-    async function loadPosts() {
+    async function loadPosts(tab = 'all') {
       try {
-        const response = await getJson('/posts')
+        const endpoint = tab === 'trending' ? '/posts/trending' : '/posts'
+        const response = await getJson(endpoint)
 
         if (!isCancelled) {
           setPosts(response.posts.map(mapApiPost))
@@ -68,13 +77,26 @@ function Frontpage() {
       }
     }
 
+    async function loadTrendingPosts() {
+      try {
+        const response = await getJson('/posts/trending')
+
+        if (!isCancelled) {
+          setTrendingPosts(response.posts.map(mapApiPost))
+        }
+      } catch (error) {
+        // Silently fail for trending posts
+      }
+    }
+
     loadCurrentUser()
-    loadPosts()
+    loadPosts(activeTab)
+    loadTrendingPosts()
 
     return () => {
       isCancelled = true
     }
-  }, [])
+  }, [activeTab])
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -99,7 +121,29 @@ function Frontpage() {
       })
 
       setPosts((currentPosts) => [mapApiPost(response.post), ...currentPosts])
+      
+      // Reload trending posts in case the new post has a hashtag
+      const trendingResponse = await getJson('/posts/trending')
+      setTrendingPosts(trendingResponse.posts.map(mapApiPost))
+      
       setPostText('')
+    } catch (error) {
+      setErrorMessage(error.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function handleLogout() {
+    setErrorMessage('')
+    setIsSubmitting(true)
+
+    try {
+      await postJson('/logout')
+      setCurrentUser(null)
+      setPosts([])
+      setTrendingPosts([])
+      navigate('/login')
     } catch (error) {
       setErrorMessage(error.message)
     } finally {
@@ -208,6 +252,25 @@ function Frontpage() {
           "
         >
           <h2 className="mb-4 text-lg font-semibold text-white">#Trending</h2>
+          <div className="space-y-3">
+            {trendingPosts.slice(0, 5).map((post) => {
+              const hashtags = extractHashtags(post.text);
+              return hashtags.length > 0 ? (
+                <div key={post.id} className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                  <p className="text-xs text-white/80 overflow-hidden" style={{display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical'}}>
+                    {hashtags.join(' ')}
+                  </p>
+                  <div className="mt-2 flex items-center justify-between text-xs text-white/60">
+                    <span>{post.authorName}</span>
+                    <span>{post.likeCount} likes</span>
+                  </div>
+                </div>
+              ) : null;
+            }).filter(Boolean)}
+            {trendingPosts.length === 0 && (
+              <p className="text-sm text-white/60">Ingen trending opslag endnu</p>
+            )}
+          </div>
         </aside>
 
         <section
@@ -252,14 +315,23 @@ function Frontpage() {
             {currentUser ? (
               <div className="self-center rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-3 md:min-w-64 md:self-start">
                 <p className="text-[11px] uppercase tracking-[0.28em] text-white/45">Logget ind som</p>
-                <div className="mt-3 flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-sm font-semibold text-white">
-                    {currentUser.name.charAt(0).toUpperCase()}
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-sm font-semibold text-white">
+                      {currentUser.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-white">{currentUser.name}</p>
+                      <p className="truncate text-xs text-white/55">{currentUser.email}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-white">{currentUser.name}</p>
-                    <p className="truncate text-xs text-white/55">{currentUser.email}</p>
-                  </div>
+                  <button
+                    onClick={handleLogout}
+                    disabled={isSubmitting}
+                    className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-white/80 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+                  >
+                    {isSubmitting ? 'Logger ud...' : 'Log ud'}
+                  </button>
                 </div>
               </div>
             ) : (
@@ -274,6 +346,29 @@ function Frontpage() {
               </div>
             )}
           </header>
+
+          <div className="mb-6 flex border-b border-white/10">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                activeTab === 'all'
+                  ? 'border-b-2 border-white text-white'
+                  : 'text-white/60 hover:text-white/80'
+              }`}
+            >
+              Alle opslag
+            </button>
+            <button
+              onClick={() => setActiveTab('trending')}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                activeTab === 'trending'
+                  ? 'border-b-2 border-white text-white'
+                  : 'text-white/60 hover:text-white/80'
+              }`}
+            >
+              Trending
+            </button>
+          </div>
 
           <form
             onSubmit={handleSubmit}
