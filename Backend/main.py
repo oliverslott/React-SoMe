@@ -337,6 +337,32 @@ def read_root():
 def read_current_user(request: Request):
     return {"user": user_payload(get_authenticated_user(request))}
 
+class UpdateNameRequest(BaseModel):
+    name: str
+
+@app.put("/me/name")
+def update_name(payload: UpdateNameRequest, request: Request):
+    user = get_authenticated_user(request)
+    new_name = payload.name.strip()
+
+    if not new_name:
+        raise HTTPException(status_code=400, detail="Du kan ikke hedde ingenting.")
+    with get_connection() as connection:
+        connection.execute(
+            "UPDATE users SET name = ? WHERE id = ?",
+            (new_name, user["id"]),
+        )
+        connection.commit()
+
+        updated_user = connection.execute(
+            "SELECT id, name, email FROM users WHERE id = ?",
+            (user["id"],),
+        ).fetchone()
+    return {
+        "message": "Navn updateret.",
+        "user": user_payload(updated_user),
+    }
+
 
 @app.post("/register")
 def register_account(payload: RegisterRequest):
