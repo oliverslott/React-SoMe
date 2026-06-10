@@ -116,7 +116,7 @@ function Login() {
         <Card className="w-full border border-white/10 bg-[#101012]/90 shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur">
           <CardHeader className="space-y-3 text-left">
             <span className="w-fit rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium tracking-[0.24em] uppercase text-white/60">
-              React SoMe
+              SoMe
             </span>
             <div className="space-y-1">
               <CardTitle className="text-2xl text-white">Log in</CardTitle>
