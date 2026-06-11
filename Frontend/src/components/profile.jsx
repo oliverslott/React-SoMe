@@ -70,9 +70,6 @@ export default function Profile() {
                                     onChange={(e) => setName(e.target.value)}
                                     className="h-11 w-full rounded-xl border border-white/10 bg-[#0c0c0e] px-4 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-white/25 focus:ring-2 focus:ring-white/10"
                                 />
-                                <p className="text-xs leading-5 text-white/45">
-                                    Dit nye navn bliver vist på tværs af SoMe.
-                                </p>
                             </div>
 
                             <button
